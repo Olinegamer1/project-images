@@ -1,0 +1,15 @@
+# ignore .idea folder Pycharm
+/.idea/
+
+**/media/
+**/migrations/
+
+*.ini
+
+# configure file
+*.env
+!template.env
+
+*.log
+
+
