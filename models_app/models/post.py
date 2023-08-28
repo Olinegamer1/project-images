@@ -5,6 +5,10 @@ from imagekit.models import ImageSpecField
 from imagekit.processors import ResizeToFill
 
 
+def get_restore_target_state(is_published):
+    return 'published' if is_published else 'moderation'
+
+
 class Post(models.Model):
     STATUS_CHOICES = [
         ('moderation', 'Moderation'),
@@ -25,6 +29,7 @@ class Post(models.Model):
                                       processors=[ResizeToFill(400, 400)],
                                       format='JPEG',
                                       options={'quality': 100})
+
     status = FSMField(default='moderation', choices=STATUS_CHOICES)
 
     class Meta:
@@ -55,9 +60,8 @@ class Post(models.Model):
 
     @transition(field=status,
                 source='deleted',
-                target=GET_STATE
-                    (lambda self, is_published: 'published' if is_published else 'moderation',
-                     states=['moderation', 'published']))
+                target=GET_STATE(get_restore_target_state,
+                                 states=['moderation', 'published']))
     def restore_by_user(self, is_published):
         ...
 

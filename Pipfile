@@ -4,13 +4,12 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-django = "*"
-python-decouple = "*"
-dj-database-url = "*"
-psycopg = "*"
-pillow = "*"
-django-imagekit = "*"
-django-fsm = "*"
+django = "4.2"
+python-decouple = "3.8"
+dj-database-url = "2.1"
+pillow = "10.0"
+django-imagekit = "4.1"
+django-fsm = "2.8"
 
 [dev-packages]
 
