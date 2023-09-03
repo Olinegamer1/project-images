@@ -1,0 +1,17 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+django = "4.2"
+python-decouple = "3.8"
+dj-database-url = "2.1"
+pillow = "10.0"
+django-imagekit = "4.1"
+django-fsm = "2.8"
+
+[dev-packages]
+
+[requires]
+python_version = "3.11"
