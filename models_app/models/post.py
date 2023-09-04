@@ -1,22 +1,27 @@
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
 from django_fsm import FSMField, transition, GET_STATE
 from imagekit.models import ImageSpecField
 from imagekit.processors import ResizeToFill
+from ..tasks import delete_post_delayed, cancel_post_deletion, cache
+
+REMOVAL_DELAY = timezone.timedelta(minutes=1)
 
 
 def get_restore_target_state(is_published):
-    return 'published' if is_published else 'moderation'
+    return Status.PUBLISHED if is_published else Status.MODERATION
+
+
+class Status(models.TextChoices):
+    MODERATION = 'mod', 'Moderation'
+    PUBLISHED = 'pub', 'Published'
+    DELETED = 'del', 'Deleted'
+    REJECTED = 'rej', 'Rejected'
 
 
 class Post(models.Model):
-    STATUS_CHOICES = [
-        ('moderation', 'Moderation'),
-        ('published', 'Published'),
-        ('deleted', 'Deleted'),
-        ('rejected', 'Rejected')
-    ]
-    title = models.CharField(max_length=50)
+    title = models.CharField(max_length=50, unique=True)
     description = models.CharField(max_length=250)
     user = models.ForeignKey(settings.AUTH_USER_MODEL,
                              related_name='posts',
@@ -30,7 +35,9 @@ class Post(models.Model):
                                       format='JPEG',
                                       options={'quality': 100})
 
-    status = FSMField(default='moderation', choices=STATUS_CHOICES)
+    status = FSMField(default=Status.MODERATION,
+                      choices=Status.choices,
+                      protected=True)
 
     class Meta:
         indexes = [
@@ -38,32 +45,36 @@ class Post(models.Model):
         ]
         ordering = ['-published_date']
 
-    @transition(field=status, source='moderation', target='rejected')
+    def schedule_deletion(self, delay_seconds):
+        task = delete_post_delayed.apply_async(args=[self.id], countdown=delay_seconds)
+        cache.set(self.id, task.id)
+
+    @transition(field=status, source=Status.MODERATION, target=Status.REJECTED)
     def reject_by_admin(self):
-        ...
+        self.schedule_deletion(REMOVAL_DELAY.total_seconds())
 
-    @transition(field=status, source='moderation', target='publish')
+    @transition(field=status, source=Status.MODERATION, target=Status.PUBLISHED)
     def approve_by_admin(self):
-        ...
+        self.published_date = timezone.now()
 
-    @transition(field=status, source=('moderation', 'published'), target='deleted')
+    @transition(field=status, source=(Status.MODERATION, Status.PUBLISHED), target=Status.DELETED)
     def delete_by_user(self):
-        ...
+        self.schedule_deletion(REMOVAL_DELAY.total_seconds())
 
-    @transition(field=status, source='published', target='moderation')
+    @transition(field=status, source=Status.PUBLISHED, target=Status.MODERATION)
     def edit_by_user(self):
         ...
 
-    @transition(field=status, source='rejected', target='moderation')
+    @transition(field=status, source=Status.REJECTED, target=Status.MODERATION)
     def restore_by_admin(self):
-        ...
+        cancel_post_deletion(self.id)
 
     @transition(field=status,
-                source='deleted',
+                source=Status.DELETED,
                 target=GET_STATE(get_restore_target_state,
-                                 states=['moderation', 'published']))
+                                 states=[Status.MODERATION, Status.PUBLISHED]))
     def restore_by_user(self, is_published):
-        ...
+        cancel_post_deletion(self.id)
 
     def __str__(self):
         return self.title
