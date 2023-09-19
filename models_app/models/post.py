@@ -1,12 +1,16 @@
 from django.conf import settings
-from django.db import models
+from django.db import models, transaction
 from django.utils import timezone
 from django_fsm import FSMField, transition, GET_STATE
 from imagekit.models import ImageSpecField
 from imagekit.processors import ResizeToFill
+from decouple import config
+
 from ..tasks import delete_post_delayed, cancel_post_deletion, cache
 
-REMOVAL_DELAY = timezone.timedelta(minutes=1)
+REMOVAL_DELAY_POST_IN_SECONDS = config('REMOVAL_DELAY_POST_IN_SECONDS',
+                                       default=3600,
+                                       cast=int)
 
 
 def get_restore_target_state(is_published):
@@ -46,20 +50,32 @@ class Post(models.Model):
         ordering = ['-published_date']
 
     def schedule_deletion(self, delay_seconds):
-        task = delete_post_delayed.apply_async(args=[self.id], countdown=delay_seconds)
+        task = delete_post_delayed.apply_async(kwargs={'post_id': self.id}, countdown=delay_seconds)
         cache.set(self.id, task.id)
+
+    @transaction.atomic
+    def custom_post_process(self, *, target_status, process):
+        """
+        Processing an object according to the specified process,
+        if its status corresponds to the target status.
+        """
+        if self.status == target_status:
+            process()
+            self.save()
 
     @transition(field=status, source=Status.MODERATION, target=Status.REJECTED)
     def reject_by_admin(self):
-        self.schedule_deletion(REMOVAL_DELAY.total_seconds())
+        self.schedule_deletion(REMOVAL_DELAY_POST_IN_SECONDS)
 
     @transition(field=status, source=Status.MODERATION, target=Status.PUBLISHED)
     def approve_by_admin(self):
         self.published_date = timezone.now()
 
-    @transition(field=status, source=(Status.MODERATION, Status.PUBLISHED), target=Status.DELETED)
+    @transition(field=status,
+                source=(Status.MODERATION, Status.PUBLISHED),
+                target=Status.DELETED)
     def delete_by_user(self):
-        self.schedule_deletion(REMOVAL_DELAY.total_seconds())
+        self.schedule_deletion(REMOVAL_DELAY_POST_IN_SECONDS)
 
     @transition(field=status, source=Status.PUBLISHED, target=Status.MODERATION)
     def edit_by_user(self):
