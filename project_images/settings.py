@@ -31,15 +31,19 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'models_app.apps.ModelsConfig',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'models_app',
+    'imagekit',
     'django_fsm',
+    'htmx',
+    'rest_framework',
     'django_cleanup.apps.CleanupConfig',
+    'django.contrib.humanize',
 ]
 
 MIDDLEWARE = [
@@ -133,3 +137,26 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_TASK_TIME_LIMIT = 120
+
+
+REMOVAL_DELAY_POST_IN_SECONDS = config('REMOVAL_DELAY_POST_IN_SECONDS',
+                                       default=3600,
+                                       cast=int)
+
+# image settings
+ALLOWED_IMAGE_TYPES = ('gif', 'jpg', 'jpeg', 'png')
+MAX_SIZE_FILE_MB = 1024 * 1024 * config('MAX_SIZE_FILE_MB',
+                          default=5,
+                          cast=int)
+MIN_WIDTH_IMAGE = config('MIN_WIDTH_IMAGE',
+                         default=400,
+                         cast=int)
+MIN_HEIGHT_IMAGE = config('MIN_HEIGHT_IMAGE',
+                         default=400,
+                         cast=int)
+
+# Rest framework settings
+# REST_FRAMEWORK = {
+#     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+#     'PAGE_SIZE': 10,
+# }

@@ -2,8 +2,9 @@ from django.contrib import admin
 
 from .models.comment import Comment
 from .models.like import Like
-from .models.post import Post, Status
+from .models.post import Post
 from .models.profile import Profile
+from models_app.services.post_service import PostAdminService
 
 admin.site.disable_action('delete_selected')
 
@@ -26,19 +27,15 @@ class PostAdmin(admin.ModelAdmin):
 
     @admin.action(description='Reject selected posts')
     def reject_and_delete(self, request, queryset):
-        self.perform_action_for_selected_posts(queryset, Status.MODERATION, Post.reject_by_admin)
+        PostAdminService.reject(queryset)
 
     @admin.action(description='Restore rejected posts')
     def restore(self, request, queryset):
-            self.perform_action_for_selected_posts(queryset, Status.REJECTED, Post.restore_by_admin)
+        PostAdminService.restore(queryset)
 
     @admin.action(description='Approve moderation posts')
     def approve(self, request, queryset):
-        self.perform_action_for_selected_posts(queryset, Status.MODERATION, Post.approve_by_admin)
-
-    def perform_action_for_selected_posts(self, queryset, target_status, action_process):
-        for post in queryset:
-            post.custom_post_process(target_status=target_status, process=action_process)
+        PostAdminService.approve(queryset)
 
 
 @admin.register(Comment)

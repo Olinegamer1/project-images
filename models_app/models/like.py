@@ -5,13 +5,13 @@ from .post import Post
 
 class Like(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL,
-                             related_name='users_liked',
+                             related_name='likes',
                              related_query_name='user_liked',
                              blank=True,
                              on_delete=models.CASCADE)
     post = models.ForeignKey(Post,
-                             related_name='images_liked',
-                             related_query_name='image_liked',
+                             related_name='likes',
+                             related_query_name='post_liked',
                              on_delete=models.CASCADE)
 
     def __str__(self):
