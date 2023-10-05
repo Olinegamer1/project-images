@@ -2,7 +2,7 @@
 /.idea/
 
 **/media/
-**/migrations/
+**/__pycache__/
 
 *.ini
 
@@ -11,5 +11,5 @@
 !template.env
 
 *.log
-
+*.txt
 
