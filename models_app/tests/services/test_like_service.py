@@ -1,8 +1,11 @@
 from django.test import TestCase
-from models_app.services.like_service import AddLikeService, RemoveLikeService, UserHasLikedPostService
 from django.contrib.auth.models import User
-from .models.like import Like
-from .models.post import Post, Status
+
+from models_app.models.like import Like
+from models_app.models.post import Post, Status
+from models_app.services.like.has_like import UserHasLikedPostService
+from models_app.services.like.remove import RemoveLikeService
+from models_app.services.like.add import AddLikeService
 
 
 class LikeServiceTestCase(TestCase):

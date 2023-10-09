@@ -4,7 +4,7 @@ from .models.comment import Comment
 from .models.like import Like
 from .models.post import Post
 from .models.profile import Profile
-from models_app.services.post_service import PostAdminService
+from models_app.services.post.admin import PostAdminService
 
 admin.site.disable_action('delete_selected')
 
